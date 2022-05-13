@@ -23,7 +23,7 @@
 
 #include "StructParser.h"
 
-#if defined GTAVC
+#if defined GTAVC && !defined eEntityStatus // Missing in CEntity.h for older plugin SDK versions
 #include <eEntityStatus.h>
 #endif
 
@@ -31,8 +31,18 @@
 #include "SAMP.h"
 #endif
 
+#if defined GTA3
+#define GTA_GAME_NAME "III"
+#endif
+#if defined GTAVC
+#define GTA_GAME_NAME "VC"
+#endif
+#if defined GTASA 
+#define GTA_GAME_NAME "SA"
+#endif
+
 #if defined GTAVC && !defined eEntityType
-enum PLUGIN_API eEntityType // Missing in VC?
+enum PLUGIN_API eEntityType // Missing in VC for older plugin SDK versions
 {
     ENTITY_TYPE_NOTHING = 0,
     ENTITY_TYPE_BUILDING = 1,
@@ -107,9 +117,18 @@ void LoadConfig()
 
 #undef VAR
 
-    if (pStructParser->ParseFile("scripts/DoNotCrash.ini", &g_Config) != -1 ||
-        pStructParser->ParseFile("plugins/DoNotCrash.ini", &g_Config) != -1 ||
-        pStructParser->ParseFile("DoNotCrash.ini", &g_Config) != -1
+    // First check if there is an ini for all games and load it
+
+    if (pStructParser->ParseFile("../GTA DoNotCrash/DoNotCrash.Global.ini", &g_Config) != -1)
+    {
+        g_Config.bLoaded = true;
+    }
+
+    // Next override the current config with any vales found in the game's directory
+
+    if (pStructParser->ParseFile("scripts/DoNotCrash." GTA_GAME_NAME ".ini", &g_Config) != -1 ||              // scripts/
+        pStructParser->ParseFile("plugins/DoNotCrash." GTA_GAME_NAME ".ini", &g_Config) != -1 ||              // plugins/
+        pStructParser->ParseFile("DoNotCrash." GTA_GAME_NAME ".ini", &g_Config) != -1                         // root dir
         )
     {
         g_Config.bLoaded = true;
@@ -247,7 +266,9 @@ public:
 
 #endif
 
-                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < g_Config.iSwapBackDelay) // Dont immediately jump back to the previous car
+                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < g_Config.iSwapBackDelay || // Don't immediately jump back to the previous car
+                    pTargetVehicle->m_fHealth <= 250.0f // Don't swap into burning or exploded vehicles
+                    )
                     return;
 
                 pLastVehicle = pPlayerVehicle;
