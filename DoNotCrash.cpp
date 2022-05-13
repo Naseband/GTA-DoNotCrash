@@ -247,7 +247,7 @@ public:
 
 #endif
 
-                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < 500) // Dont immediately jump back to the previous car
+                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < g_Config.iSwapBackDelay) // Dont immediately jump back to the previous car
                     return;
 
                 pLastVehicle = pPlayerVehicle;
