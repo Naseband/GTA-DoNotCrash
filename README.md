@@ -25,8 +25,7 @@ If a config exists for both the game and in the *GTA DoNotCrash* directory, the 
 
 # Interference with missions
 
-There are quite a few missions that are either a lot easier to play because the AI stops working, or incredibly hard (like Carmageddon (VC)). I aim to fix the AI as well as possible.
-Take a look at the config to disable swapping to objective vehicles.
+There are quite a few missions that are either a lot easier to play because the AI stops working, or pretty annoying (like Carmageddon (VC)). I aim to fix the AI as well as possible.
 
 # To Do
 
