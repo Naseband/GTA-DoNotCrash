@@ -6,6 +6,9 @@ If the colliding vehicle has a driver, the driver of that vehicle will also swap
 
 The GTA SA version disables automatically if SAMP is loaded.
 
+You can configure the delay between swaps in the INI, as well as some other options.
+Currently SwapTypes are not in use, as there are only vehicle to vehicle swaps.
+
 # To Do
 
 - Restore ped tasks in III and VC
@@ -17,7 +20,6 @@ The GTA SA version disables automatically if SAMP is loaded.
   - Player dies if object is breakable and breaks
   - Make non-controlled breakable objects unbreakable
 - Swap between peds, vehicles and objects respectively
-- Add config (INI, maybe ingame)
 
 # Dependencies/Credits
 
