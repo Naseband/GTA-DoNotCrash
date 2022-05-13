@@ -8,13 +8,13 @@ The GTA SA version disables automatically if SAMP is loaded.
 
 # Global config
 
-If you want to have one config for all three games, create a folder called *GTA DoNotCrash* where the Grand Theft Auto III/Vice City/San Andreas folders are located.
+If you want to have one config for all three games, create a folder called *GTA DoNotCrash* where the Grand Theft Auto III/Vice City/San Andreas folders are located and put *DoNotCrash.Global.ini* in that directory.
 
-Example: *C:/Program Files (x86)/GTA DoNotCrash/DoNotCrash.ini*.
+Example: *C:/Program Files (x86)/GTA DoNotCrash/DoNotCrash.Global.ini*.
 
 # Per-Game config
 
-To configure the games individually you can place the INI in the *scripts*, *plugins* or the respective GTA root directory of each GTA game.
+To configure DoNotCrash for each game individually you can place the INI in the *scripts*, *plugins* or root directory of the respective GTA game.
 
 The name of the ini file must be equal to the (default) asi file name:
 - *DoNotCrash.III.ini*
