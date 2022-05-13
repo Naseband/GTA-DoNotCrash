@@ -18,3 +18,9 @@ The GTA SA version disables automatically if SAMP is loaded.
   - Make non-controlled breakable objects unbreakable
 - Swap between peds, vehicles and objects respectively
 - Add config (INI, maybe ingame)
+
+# Dependencies/Credits
+
+GTA SA Plugin SDK
+
+https://github.com/DK22Pac/plugin-sdk/
