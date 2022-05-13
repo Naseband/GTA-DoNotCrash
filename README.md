@@ -4,6 +4,8 @@ Simple plugin for GTA 3, VC and SA that puts the player into any vehicle they co
 
 If the colliding vehicle has a driver, the driver of that vehicle will also swap to your old vehicle.
 
+The GTA SA version disables automatically if SAMP is loaded.
+
 # To Do
 
 - Restore ped tasks in 3 and VC
