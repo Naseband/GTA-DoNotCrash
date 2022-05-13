@@ -18,7 +18,10 @@
 #include <CVehicle.h>
 #include <CCamera.h>
 #include <CPools.h>
+#include <CTheScripts.h>
 #include <extensions/ScriptCommands.h>
+
+#include "StructParser.h"
 
 #if defined GTAVC
 #include <eEntityStatus.h>
@@ -41,6 +44,80 @@ enum PLUGIN_API eEntityType // Missing in VC?
 
 using namespace plugin;
 
+struct SConfig
+{
+    bool bLoaded = false;
+
+    bool bActive = true;
+
+    bool bActiveOnMission = false;
+    bool bActiveOnSubmission = false;
+    
+    unsigned int iSwapDelay = 100;
+    unsigned int iSwapBackDelay = 1500;
+
+    bool bPedToPed = true;
+    bool bPedToVehicle = true;
+    bool bPedToObject = true;
+
+    bool bVehicleToPed = true;
+    bool bVehicleToVehicle = true;
+    bool bVehicleToObject = true;
+
+    bool bObjectToPed = true;
+    bool bObjectToVehicle = true;
+    bool bObjectToObject = true;
+};
+
+SConfig g_Config;
+
+void LoadConfig()
+{
+    SConfig
+        Base;
+
+    StructParser<SConfig>
+        *pStructParser = new StructParser<SConfig>(&Base);
+
+#define VAR(x) &x, sizeof(x) // Only use it for non-arrays.
+
+    // General
+
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bActive), 1, "General", "Active");
+
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bActiveOnMission), 1, "General", "ActiveOnMission");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bActiveOnSubmission), 1, "General", "ActiveOnSubmission");
+
+    pStructParser->Link(LinkType::UNSIGNED, VAR(Base.iSwapDelay), 1, "General", "SwapDelay");
+    pStructParser->Link(LinkType::UNSIGNED, VAR(Base.iSwapBackDelay), 1, "General", "SwapBackDelay");
+
+    // SwapTypes
+
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bPedToPed), 1, "SwapTypes", "PedToPed");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bPedToVehicle), 1, "SwapTypes", "PedToVehicle");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bPedToObject), 1, "SwapTypes", "PedToObject");
+
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bVehicleToPed), 1, "SwapTypes", "VehicleToPed");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bVehicleToVehicle), 1, "SwapTypes", "VehicleToVehicle");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bVehicleToObject), 1, "SwapTypes", "VehicleToObject");
+
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bObjectToPed), 1, "SwapTypes", "ObjectToPed");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bObjectToVehicle), 1, "SwapTypes", "ObjectToVehicle");
+    pStructParser->Link(LinkType::BOOL, VAR(Base.bObjectToObject), 1, "SwapTypes", "ObjectToObject");
+
+#undef VAR
+
+    if (pStructParser->ParseFile("scripts/DoNotCrash.ini", &g_Config) != -1 ||
+        pStructParser->ParseFile("plugins/DoNotCrash.ini", &g_Config) != -1 ||
+        pStructParser->ParseFile("DoNotCrash.ini", &g_Config) != -1
+        )
+    {
+        g_Config.bLoaded = true;
+    }
+
+    delete pStructParser;
+}
+
 class DoNotCrash {
 public:
     DoNotCrash()
@@ -50,11 +127,10 @@ public:
             return;
 #endif
 
+        // Add to scripts event
+
         Events::processScriptsEvent += []
         {
-            if (!Command<Commands::IS_PLAYER_PLAYING>(0))
-                return;
-
             CPlayerPed
                 *pPlayerPed;
 
@@ -80,45 +156,53 @@ public:
             static CVehicle
                 *pLastVehicle = nullptr;
 
-            int
-                iPoolSize;
+            static bool
+                bInit = false;
 
-            if (dwNow - dwLastSwap < 100)
+            // Load config
+
+            if (!bInit)
+            {
+                LoadConfig();
+                bInit = true;
+            }
+
+            // Check if we even need to do anything
+
+            if (!g_Config.bActive || 
+                dwNow - dwLastSwap < g_Config.iSwapDelay ||
+                !Command<Commands::IS_PLAYER_PLAYING>(0) ||
+                !g_Config.bActiveOnMission && CTheScripts::IsPlayerOnAMission()
+                )
                 return;
+
+#if defined GTASA
+
+            if (!g_Config.bActiveOnSubmission && CTheScripts::bMiniGameInProgress)
+                return;
+
+#endif
 
             // Find Player and Vehicle
 
-#if !defined GTASA
-
-            pPlayerPed = FindPlayerPed();
-
-#else
+#if defined GTASA
 
             pPlayerPed = FindPlayerPed(0);
-
-#endif
-
-            if (!pPlayerPed)
-                return;
-
-#if !defined GTASA
-
-            pPlayerVehicle = FindPlayerVehicle();
+            pPlayerVehicle = FindPlayerVehicle(0, false);
 
 #else
 
-            pPlayerVehicle = FindPlayerVehicle(0, false);
+            pPlayerPed = FindPlayerPed();
+            pPlayerVehicle = FindPlayerVehicle();
 
 #endif
 
-            if (!pPlayerVehicle || pPlayerVehicle->m_pDriver != pPlayerPed)
+            if (!pPlayerPed || !pPlayerVehicle || pPlayerVehicle->m_pDriver != pPlayerPed)
                 return;
 
             // Make all vehicles be fully processed. Modern hardware can handle it!
 
-            iPoolSize = CPools::ms_pVehiclePool->m_nSize;
-
-            for (int i = 0; i < iPoolSize; ++i)
+            for (int i = 0; i < CPools::ms_pVehiclePool->m_nSize; ++i)
             {
                 if (CPools::ms_pVehiclePool->IsFreeSlotAtIndex(i))
                     continue;
@@ -131,53 +215,39 @@ public:
                 if ((pTargetVehicle->GetPosition() - pPlayerVehicle->GetPosition()).Magnitude() > 40.0f)
                     continue;
 
-#if !defined GTASA
-
-                if (pTargetVehicle->m_nState == STATUS_SIMPLE)
-                    pTargetVehicle->m_nState = STATUS_PHYSICS;
-
-#endif
-#if defined GTAVC
-
-                if (pTargetVehicle->m_nState == STATUS_SIMPLE)
-                    pTargetVehicle->m_nState = STATUS_PHYSICS;
-
-#endif
 #if defined GTASA
 
                 if (pTargetVehicle->m_nStatus == STATUS_SIMPLE)
                     pTargetVehicle->m_nStatus = STATUS_PHYSICS;
+
+#else
+
+                if (pTargetVehicle->m_nState == STATUS_SIMPLE)
+                    pTargetVehicle->m_nState = STATUS_PHYSICS;
 
 #endif
             }
 
             // Find last collided vehicle and do the thing
             
-#if defined GTA3
-
-            if (pPlayerVehicle->m_pDamageEntity != nullptr && pPlayerVehicle->m_pDamageEntity->m_nType == eEntityType::ENTITY_TYPE_VEHICLE)
-            {
-                pTargetVehicle = (CVehicle*)pPlayerVehicle->m_pDamageEntity;
-                pTargetPed = pTargetVehicle->m_pDriver;
-
-#endif
 #if defined GTAVC
 
             if (pPlayerVehicle->m_pPhysColliding != nullptr && pPlayerVehicle->m_pPhysColliding->m_nType == eEntityType::ENTITY_TYPE_VEHICLE)
             {
-                pTargetVehicle = (CVehicle*)pPlayerVehicle->m_pPhysColliding;
+                pTargetVehicle = static_cast<CVehicle*>(pPlayerVehicle->m_pPhysColliding);
                 pTargetPed = pTargetVehicle->m_pDriver;
+            
 
-#endif
-#if defined GTASA
+#else
 
             if (pPlayerVehicle->m_pDamageEntity != nullptr && pPlayerVehicle->m_pDamageEntity->m_nType == eEntityType::ENTITY_TYPE_VEHICLE)
             {
-                pTargetVehicle = (CVehicle*)pPlayerVehicle->m_pDamageEntity;
+                pTargetVehicle = static_cast<CVehicle*>(pPlayerVehicle->m_pDamageEntity);
                 pTargetPed = pTargetVehicle->m_pDriver;
 
 #endif
-                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < 1500) // Dont immediately jump back to the previous car
+
+                if (pLastVehicle == pTargetVehicle && dwNow - dwLastSwap < 500) // Dont immediately jump back to the previous car
                     return;
 
                 pLastVehicle = pPlayerVehicle;
@@ -186,7 +256,7 @@ public:
                 // Save velocity. When the vehicles are switched they usually lose all of it (requires status to be physics)
 
                 vecPlayerVelocity = pPlayerVehicle->m_vecMoveSpeed;
-                vecTargetVelocity = pPlayerVehicle->m_vecMoveSpeed;
+                vecTargetVelocity = pTargetVehicle->m_vecMoveSpeed;
 
                 // Remove player from vehicle
 
@@ -209,8 +279,8 @@ public:
                 // Restore velocity
 
                 pPlayerVehicle->m_vecMoveSpeed = vecPlayerVelocity;
-                pPlayerVehicle->m_vecMoveSpeed = vecTargetVelocity;
+                pTargetVehicle->m_vecMoveSpeed = vecTargetVelocity;
             }
-        }; // processScriptsEvent
+        }; // end processScriptsEvent
     }
 } doNotCrash;
