@@ -10,7 +10,7 @@ The GTA SA version disables automatically if SAMP is loaded.
 
 - Restore ped tasks in III and VC
 - Add support for peds
-  - In 3 and VC just change ped models and swap positions
+  - In III and VC just change ped models and swap positions
   - In SA that may be more complex with CJ clothing etc.
 - Add support for dynamic (moveable) objects
   - Controlled like in prophunt
