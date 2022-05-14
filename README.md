@@ -30,6 +30,8 @@ There are quite a few missions that are either a lot easier to play because the 
 # To Do
 
 - Restore ped tasks after swaps
+- Make on foot CCopPeds chase the new vehicle - sometimes cops that are trying to bust the player will continue chasing the old vehicle
+  This can result in the player getting busted even though the cop is busting a random ped in the old vehicle
 - Add support for peds
   - In III and VC just change ped models and swap positions
   - In SA that may be more complex with CJ clothing etc.
